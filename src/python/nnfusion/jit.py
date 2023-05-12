@@ -51,9 +51,8 @@ def get_nrt_forward(obj, signature, config, outputs, *inputs,
             inputs = list(inputs)
             nnf.run(inputs, results)
 
-        if output_is_tensor:
-            return results[0]
-        return results
+        return results[0] if output_is_tensor else results
+
     return forward
 
 
@@ -109,7 +108,7 @@ def parse_config(tune, tuning_steps, config):
     elif type(config) is dict:
         config = Config(config)
 
-    if not type(config) is Config:
+    if type(config) is not Config:
         raise TypeError(
             "Expected optional 'config' argument of type dict or "
             f"nnfusion.Config but found {config}"
@@ -214,6 +213,4 @@ def jit(obj=None, *, tune=None, tuning_steps=None, config=None, _signature=None)
             return _obj
         return wrapper
 
-    if obj is None:
-        return _jit
-    return _jit(obj)
+    return _jit if obj is None else _jit(obj)

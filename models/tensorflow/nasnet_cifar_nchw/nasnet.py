@@ -226,10 +226,7 @@ def _build_aux_head(net, end_points, num_classes, hparams, scope):
       aux_logits = tf.nn.relu(aux_logits)
       # Shape of feature map before the final layer.
       shape = aux_logits.shape
-      if hparams.data_format == 'NHWC':
-        shape = shape[1:3]
-      else:
-        shape = shape[2:4]
+      shape = shape[1:3] if hparams.data_format == 'NHWC' else shape[2:4]
       aux_logits = slim.conv2d(aux_logits, 768, shape, padding='VALID')
       aux_logits = slim.batch_norm(aux_logits, scope='aux_bn1')
       aux_logits = tf.nn.relu(aux_logits)
@@ -255,12 +252,13 @@ def _imagenet_stem(inputs, hparams, stem_cell, current_step=None):
   for cell_num in range(num_stem_cells):
     net = stem_cell(
         net,
-        scope='cell_stem_{}'.format(cell_num),
+        scope=f'cell_stem_{cell_num}',
         filter_scaling=filter_scaling,
         stride=2,
         prev_layer=cell_outputs[-2],
         cell_num=cell_num,
-        current_step=current_step)
+        current_step=current_step,
+    )
     cell_outputs.append(net)
     filter_scaling *= hparams.filter_scaling_rate
   return net, cell_outputs

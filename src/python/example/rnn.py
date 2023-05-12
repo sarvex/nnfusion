@@ -40,7 +40,7 @@ class LSTMCell(nn.Module):
         self.U = nn.ParameterList()
         self.b = nn.ParameterList()
         self.num_unit = hidden_size
-        for i in range(4):
+        for _ in range(4):
             W = nn.Parameter(torch.nn.init.xavier_uniform_(torch.empty(
                 self.num_unit, self.num_unit, device=args.device)))
             U = nn.Parameter(torch.nn.init.xavier_uniform_(torch.empty(
@@ -99,11 +99,12 @@ class StackedRNN(nn.Module):
             self.batch_size, self.num_unit, device=args.device))
 
         self.stacked_cells = torch.nn.ModuleList(
-            [cell(self.num_unit) for layer in range(self.num_layer)])
+            [cell(self.num_unit) for _ in range(self.num_layer)]
+        )
 
     def forward(self, inputs):
         inputs = torch.unbind(inputs, dim=0)
-        states = [self.initial_state for layer in range(self.num_layer)]
+        states = [self.initial_state for _ in range(self.num_layer)]
 
         for step in range(self.num_step):
             cur_input = inputs[step]
@@ -140,7 +141,7 @@ def pytorch_train_rnn():
     backend = "PyTorch"
     if args.backend == "torchscript":
         backend += " TorchScript"
-    print("Train RNN model on MNIST dataset with {}".format(backend))
+    print(f"Train RNN model on MNIST dataset with {backend}")
 
     train_loader, test_loader = data_loader.get_mnist_dataloader(
         batch_size=args.batch_size, shuffle=False, drop_last=True, num_workers=2)
@@ -161,8 +162,9 @@ def pytorch_train_rnn():
     for epoch in range(args.num_epoch):
         for i, batch in enumerate(train_loader):
             if sum_iter == 100:
-                print("Epoch {}, batch {}，loss {}, time {} s".format(
-                    epoch, i, sum_loss / sum_iter, sum_time / sum_iter))
+                print(
+                    f"Epoch {epoch}, batch {i}，loss {sum_loss / sum_iter}, time {sum_time / sum_iter} s"
+                )
                 sum_loss = 0
                 sum_iter = 0
                 sum_time = 0
@@ -224,8 +226,8 @@ def test_runner():
     point2 = time.time()
     out2 = runner(image_input)[0].cpu().numpy()
     point3 = time.time()
-    print("Duration1: {}s".format(point2 - point1))
-    print("Duration2: {}s".format(point3 - point2))
+    print(f"Duration1: {point2 - point1}s")
+    print(f"Duration2: {point3 - point2}s")
     assert np.allclose(out1, out2)
 
 
@@ -257,8 +259,9 @@ def train_rnn():
     for epoch in range(args.num_epoch):
         for i, batch in enumerate(train_loader):
             if sum_iter == 100:
-                print("Epoch {}, batch {}，loss {}, time {} s".format(
-                    epoch, i, sum_loss / sum_iter, sum_time / sum_iter))
+                print(
+                    f"Epoch {epoch}, batch {i}，loss {sum_loss / sum_iter}, time {sum_time / sum_iter} s"
+                )
                 sum_loss = 0
                 sum_iter = 0
                 sum_time = 0
@@ -299,7 +302,7 @@ def eval_rnn():
     eval_acc = 0
     eval_size = 0
 
-    for i, batch in enumerate(test_loader):
+    for batch in test_loader:
         with torch.no_grad():
             data, label = (t.to(args.device) for t in batch)
             predict = model(data)
@@ -311,7 +314,7 @@ def eval_rnn():
 
 
 if __name__ == "__main__":
-    if args.backend == "pytorch" or args.backend == "torchscript":
+    if args.backend in ["pytorch", "torchscript"]:
         pytorch_train_rnn()
         eval_rnn()
     elif args.backend == "nnfusion":

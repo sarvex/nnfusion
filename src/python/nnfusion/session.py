@@ -84,7 +84,7 @@ def convert_model_to_onnx(model,
 def codegen(model_path, flags, output_dir):
     model_path = os.path.abspath(model_path)
     with cd(output_dir):
-        command = "{} {} {}".format("nnfusion", model_path, flags)
+        command = f"nnfusion {model_path} {flags}"
         execute(command)
 
 
@@ -139,15 +139,11 @@ class PTSession(object):
         """
         self._model = model
         if model_format != "onnx":
-            raise Exception("{} format not supported yet".format(model_format))
+            raise Exception(f"{model_format} format not supported yet")
         self._model_format = model_format
-        self._torch_weights = {
-            name: param
-            for name, param in self._model.named_parameters()
-        }
-        self._torch_weights.update(
-            {name: param
-             for name, param in self._model.named_buffers()})
+        self._torch_weights = (
+            dict(self._model.named_parameters()) | self._model.named_buffers()
+        )
         self._input_desc = input_desc
         self._device = device
         self._raw_input = raw_input
@@ -187,7 +183,7 @@ class PTSession(object):
 
         # codegen
         self._codegen_flags = {"extern_result_memory": 1}
-        self._codegen_flags.update(codegen_flags or {})
+        self._codegen_flags |= (codegen_flags or {})
         if self._codegen_flags.get("training_mode",
                                    False) and self._const_folding:
             raise Exception("Const folding and training mode are incompatible")
@@ -202,13 +198,12 @@ class PTSession(object):
             # TODO: support allocate torch tensors on ROCM device
             raise Exception("ROCm not supported yet")
         else:
-            raise Exception("Unknown device {}".format(self._device))
+            raise Exception(f"Unknown device {self._device}")
 
         if self._build_nnf:
-            flags_str = "-f {} ".format(self._model_format)
-            flags_str += " ".join([
-                "-f{}={}".format(k, v) for k, v in self._codegen_flags.items()
-            ])
+            flags_str = f"-f {self._model_format} " + " ".join(
+                [f"-f{k}={v}" for k, v in self._codegen_flags.items()]
+            )
             codegen(self._onnx_model_path, flags_str, self._workdir)
             modify_nnfusion_rt(rt_dir)
             build(rt_dir)
@@ -240,7 +235,7 @@ class PTSession(object):
             else:
                 self._inputs[desc.name] = None
 
-        if bool(self._codegen_flags.get("extern_result_memory")) is not True:
+        if not bool(self._codegen_flags.get("extern_result_memory")):
             raise Exception("Please add extern_result_memory to codegen flags")
 
         for desc in nnf_outputs:
@@ -294,11 +289,9 @@ class PTSession(object):
         for name, weight in self._torch_weights.items():
             if bool(torch.isnan(weight).any()) or bool(
                     torch.isinf(weight).any()):
-                logger.error("Nan or inf found in {}".format(name))
+                logger.error(f"Nan or inf found in {name}")
                 # logger.error(weight)
                 have_nan = True
         return have_nan
 
 
-if __name__ == "__main__":
-    pass

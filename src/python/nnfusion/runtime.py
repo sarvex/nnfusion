@@ -45,8 +45,8 @@ class NNFusionRT:
         """
 
         def export_onnx(fname):
-            input_names = ["input" + str(i) for i in range(len(inputs))]
-            output_names = ["output" + str(i) for i in range(len(outputs))]
+            input_names = [f"input{str(i)}" for i in range(len(inputs))]
+            output_names = [f"output{str(i)}" for i in range(len(outputs))]
             torch.onnx.export(self.model, inputs, fname,
                               input_names=input_names,
                               output_names=output_names,

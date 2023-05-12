@@ -50,11 +50,11 @@ def copy_to_output(output_dir, build_type, platform):
         nnf_xbox_dir, platform if "x64" in platform else "", build_type, "nnf_xbox_example.exe")
     deps_dir = os.path.join(
         nnf_xbox_dir, platform if "x64" in platform else "", r"Layout\Image\Loose")
-    deps = []
-    for file_name in os.listdir(deps_dir):
-        if file_name.endswith(".dll"):
-            deps.append(file_name)
-
+    deps = [
+        file_name
+        for file_name in os.listdir(deps_dir)
+        if file_name.endswith(".dll")
+    ]
     runtime_dir = r".\runtime"
     nnf_lib = os.path.join(
         runtime_dir, platform if "x64" in platform else "", build_type, "nnfusion_rt.dll")

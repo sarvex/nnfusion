@@ -29,10 +29,7 @@ class TopK(OperatorBase):
         def get_block_max_element(self, dtype):
             (dx_type_str, dx_type_size, dx_type_min, dx_type_max) = get_type_info(dtype)
             in_block_number = 512
-            # Element in shared memory: [{_type_, int}, ... ]
-            # Only 4096 Bytes shared memory(L1 cache) in DirectX
-            in_block_number = 4096 // (dx_type_size + 4)
-            return in_block_number
+            return 4096 // (dx_type_size + 4)
         
         def get_config(self):
             # [GreaterBlock(SmallerBlock(Threads for max 512 elements))]
@@ -131,9 +128,8 @@ class TopK(OperatorBase):
         if "k" in input_dict:
             input_dict['K'] = input_dict['k']
 
-        if 'data' in input_dict['input']:
-            if 1 in input_dict['input']['data']:
-                input_dict['K'] = int(input_dict['input']['data'][1][0])
+        if 'data' in input_dict['input'] and 1 in input_dict['input']['data']:
+            input_dict['K'] = int(input_dict['input']['data'][1][0])
 
         outputs["shape"][0][self['axis']] = input_dict["K"]
         outputs["shape"][1][self['axis']] = input_dict["K"]
@@ -149,9 +145,7 @@ class TopKTest(OperatorTestBase, TopK):
         self["largest"] = 1
         self["sorted"] = 1
         self["K"] = 3
-        self["input"] = {}
-        self["input"]["shape"] = [[3, 4]]
-        self["input"]["dtype"] = ["float32"]
+        self["input"] = {"shape": [[3, 4]], "dtype": ["float32"]}
         X = np.array([[0, 1, 2, 3], [4, 5, 6, 7], [
             8, 9, 10, 11], ], dtype=np.float32)
         values_ref = np.array(
@@ -166,10 +160,7 @@ class TopKTest(OperatorTestBase, TopK):
         import random
         import torch
         shape = [123, 123, 123]
-        self["input"] = {}
-        self["input"]["shape"] = [shape]
-        self["input"]["dtype"] = ["int32"]
-
+        self["input"] = {"shape": [shape], "dtype": ["int32"]}
         self["axis"] = 0
         self["largest"] = 1
         self["K"] = 57
@@ -187,10 +178,7 @@ class TopKTest(OperatorTestBase, TopK):
             print("No CUDA Runtime Found.")
             return {}
         shape = [10, 512]
-        self["input"] = {}
-        self["input"]["shape"] = [shape]
-        self["input"]["dtype"] = ["float16"]
-
+        self["input"] = {"shape": [shape], "dtype": ["float16"]}
         self["axis"] = 1
         self["largest"] = 1
         self["K"] = 129
@@ -205,13 +193,8 @@ class TopKTest(OperatorTestBase, TopK):
     def create_topk_test_random_float(self):
         import random
         import torch
-        shape = []
-        for i in range(0, random.randint(2, 3)):
-            shape.append(random.randint(100, 256))
-        self["input"] = {}
-        self["input"]["shape"] = [shape]
-        self["input"]["dtype"] = ["float32"]
-
+        shape = [random.randint(100, 256) for _ in range(0, random.randint(2, 3))]
+        self["input"] = {"shape": [shape], "dtype": ["float32"]}
         self["axis"] = random.randint(0, len(shape)-1)
         self["largest"] = 1
         k = random.randint(1, shape[self["axis"]])
@@ -227,13 +210,8 @@ class TopKTest(OperatorTestBase, TopK):
     def create_topk_test_random_float_smallest(self):
         import torch
         import random
-        shape = []
-        for i in range(0, random.randint(2, 3)):
-            shape.append(random.randint(100, 256))
-        self["input"] = {}
-        self["input"]["shape"] = [shape]
-        self["input"]["dtype"] = ["float32"]
-
+        shape = [random.randint(100, 256) for _ in range(0, random.randint(2, 3))]
+        self["input"] = {"shape": [shape], "dtype": ["float32"]}
         self["axis"] = random.randint(0, len(shape)-1)
         self["largest"] = 0
         self["K"] = random.randint(1, shape[self["axis"]])
@@ -251,11 +229,14 @@ class TopKTest(OperatorTestBase, TopK):
     def export_onnx_test(self):
         import torch
         from torch import nn
+
+
         class T(nn.Module):
             def forward(self, a, b):
                 m = a + b
-                r = torch.topk(m, k = 97, dim = 0)
-                return r
+                return torch.topk(m, k = 97, dim = 0)
+
+
         m = T()
         torch.onnx.export(m, (torch.randn((232,124), dtype=torch.float32),  torch.randn((232, 124), dtype=torch.float32)), "topk.hlsl.onnx")
     
@@ -264,10 +245,7 @@ class TopKTest(OperatorTestBase, TopK):
         import random
         import torch
         shape = [1, 3018]
-        self["input"] = {}
-        self["input"]["shape"] = [shape]
-        self["input"]["dtype"] = ["float32"]
-
+        self["input"] = {"shape": [shape], "dtype": ["float32"]}
         self["axis"] = 1
         self["largest"] = 1
         k = 6

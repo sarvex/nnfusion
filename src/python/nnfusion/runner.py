@@ -75,16 +75,20 @@ class PTRunner(object):
         ## Cannot support kwargs because they have no fixed args index,
         ## but torch exportor requires a fixed sequence
         ## todo: partially support such model by `inspect`
-        if len(kwargs) != 0:
+        if kwargs:
             raise Exception("Model forward with kwargs not supported yet")
         flatten_args = flatten(args)
-        descs, devices = zip(*(extract_desc_and_device("input_{}".format(i), v)
-                               for i, v in enumerate(flatten_args)))
+        descs, devices = zip(
+            *(
+                extract_desc_and_device(f"input_{i}", v)
+                for i, v in enumerate(flatten_args)
+            )
+        )
         unique_devices = set(devices)
         if len(unique_devices) != 1:
             raise Exception(
-                "All input tensors should be on the same device: {}".format(
-                    unique_devices))
+                f"All input tensors should be on the same device: {unique_devices}"
+            )
         device = list(unique_devices)[0]
-        feeds = {"input_{}".format(i): v for i, v in enumerate(flatten_args)}
+        feeds = {f"input_{i}": v for i, v in enumerate(flatten_args)}
         return self._retrieve_by_desc(descs, device, args)(feeds)

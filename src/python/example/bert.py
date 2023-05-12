@@ -58,9 +58,8 @@ def test_runner():
     print('pytorch_loss: ', loss)
     print('nnf_loss: ', nnf_loss)
     assert np.allclose(
-        loss.cpu().detach().numpy(),
-        nnf_loss.cpu().detach().numpy()), "Torch out: {}, NNF out: {}".format(
-            loss, nnf_loss)
+        loss.cpu().detach().numpy(), nnf_loss.cpu().detach().numpy()
+    ), f"Torch out: {loss}, NNF out: {nnf_loss}"
 
 
 def read_imdb_split(split_dir):
@@ -135,8 +134,7 @@ def pytorch_train_bert():
     for epoch in range(3):
         for i, batch in enumerate(train_loader):
             if sum_iter == 100:
-                print("Epoch {}, batch {}，loss {}".format(
-                    epoch, i, sum_loss / sum_iter))
+                print(f"Epoch {epoch}, batch {i}，loss {sum_loss / sum_iter}")
                 sum_loss = 0
                 sum_iter = 0
 
@@ -193,8 +191,7 @@ def train_bert():
     for epoch in range(3):
         for i, batch in enumerate(train_loader):
             if sum_iter == 100:
-                print("Epoch {}, batch {}, nnf_loss {}".format(
-                    epoch, i, sum_nnf_loss / sum_iter))
+                print(f"Epoch {epoch}, batch {i}, nnf_loss {sum_nnf_loss / sum_iter}")
                 sum_nnf_loss = 0
                 sum_iter = 0
 

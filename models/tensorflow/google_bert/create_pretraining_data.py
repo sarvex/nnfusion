@@ -96,14 +96,13 @@ class TrainingInstance(object):
 def write_instance_to_example_files(instances, tokenizer, max_seq_length,
                                     max_predictions_per_seq, output_files):
   """Create TF example files from `TrainingInstance`s."""
-  writers = []
-  for output_file in output_files:
-    writers.append(tf.python_io.TFRecordWriter(output_file))
-
+  writers = [
+      tf.python_io.TFRecordWriter(output_file) for output_file in output_files
+  ]
   writer_index = 0
 
   total_written = 0
-  for (inst_index, instance) in enumerate(instances):
+  for inst_index, instance in enumerate(instances):
     input_ids = tokenizer.convert_tokens_to_ids(instance.tokens)
     input_mask = [1] * len(input_ids)
     segment_ids = list(instance.segment_ids)
@@ -147,8 +146,9 @@ def write_instance_to_example_files(instances, tokenizer, max_seq_length,
 
     if inst_index < 20:
       tf.logging.info("*** Example ***")
-      tf.logging.info("tokens: %s" % " ".join(
-          [tokenization.printable_text(x) for x in instance.tokens]))
+      tf.logging.info(
+          f'tokens: {" ".join([tokenization.printable_text(x) for x in instance.tokens])}'
+      )
 
       for feature_name in features.keys():
         feature = features[feature_name]
@@ -157,8 +157,7 @@ def write_instance_to_example_files(instances, tokenizer, max_seq_length,
           values = feature.int64_list.value
         elif feature.float_list.value:
           values = feature.float_list.value
-        tf.logging.info(
-            "%s: %s" % (feature_name, " ".join([str(x) for x in values])))
+        tf.logging.info(f'{feature_name}: {" ".join([str(x) for x in values])}')
 
   for writer in writers:
     writer.close()
@@ -167,13 +166,11 @@ def write_instance_to_example_files(instances, tokenizer, max_seq_length,
 
 
 def create_int_feature(values):
-  feature = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
-  return feature
+  return tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
 
 
 def create_float_feature(values):
-  feature = tf.train.Feature(float_list=tf.train.FloatList(value=list(values)))
-  return feature
+  return tf.train.Feature(float_list=tf.train.FloatList(value=list(values)))
 
 
 def create_training_instances(input_files, tokenizer, max_seq_length,
@@ -199,8 +196,7 @@ def create_training_instances(input_files, tokenizer, max_seq_length,
         # Empty lines are used as document delimiters
         if not line:
           all_documents.append([])
-        tokens = tokenizer.tokenize(line)
-        if tokens:
+        if tokens := tokenizer.tokenize(line):
           all_documents[-1].append(tokens)
 
   # Remove empty documents
@@ -298,13 +294,11 @@ def create_instances_from_document(
             tokens_b.extend(current_chunk[j])
         truncate_seq_pair(tokens_a, tokens_b, max_num_tokens, rng)
 
-        assert len(tokens_a) >= 1
-        assert len(tokens_b) >= 1
+        assert tokens_a
+        assert tokens_b
 
-        tokens = []
-        segment_ids = []
-        tokens.append("[CLS]")
-        segment_ids.append(0)
+        tokens = ["[CLS]"]
+        segment_ids = [0]
         for token in tokens_a:
           tokens.append(token)
           segment_ids.append(0)
@@ -345,7 +339,7 @@ def create_masked_lm_predictions(tokens, masked_lm_prob,
 
   cand_indexes = []
   for (i, token) in enumerate(tokens):
-    if token == "[CLS]" or token == "[SEP]":
+    if token in ["[CLS]", "[SEP]"]:
       continue
     # Whole Word Masking means that if we mask all of the wordpieces
     # corresponding to an original word. When a word has been split into
@@ -356,8 +350,7 @@ def create_masked_lm_predictions(tokens, masked_lm_prob,
     # Note that Whole Word Masking does *not* change the training code
     # at all -- we still predict each WordPiece independently, softmaxed
     # over the entire vocabulary.
-    if (FLAGS.do_whole_word_mask and len(cand_indexes) >= 1 and
-        token.startswith("##")):
+    if FLAGS.do_whole_word_mask and cand_indexes and token.startswith("##"):
       cand_indexes[-1].append(i)
     else:
       cand_indexes.append([i])
@@ -378,11 +371,7 @@ def create_masked_lm_predictions(tokens, masked_lm_prob,
     # predictions, then just skip this candidate.
     if len(masked_lms) + len(index_set) > num_to_predict:
       continue
-    is_any_index_covered = False
-    for index in index_set:
-      if index in covered_indexes:
-        is_any_index_covered = True
-        break
+    is_any_index_covered = any(index in covered_indexes for index in index_set)
     if is_any_index_covered:
       continue
     for index in index_set:
@@ -392,13 +381,10 @@ def create_masked_lm_predictions(tokens, masked_lm_prob,
       # 80% of the time, replace with [MASK]
       if rng.random() < 0.8:
         masked_token = "[MASK]"
+      elif rng.random() < 0.5:
+        masked_token = tokens[index]
       else:
-        # 10% of the time, keep original
-        if rng.random() < 0.5:
-          masked_token = tokens[index]
-        # 10% of the time, replace with random word
-        else:
-          masked_token = vocab_words[rng.randint(0, len(vocab_words) - 1)]
+        masked_token = vocab_words[rng.randint(0, len(vocab_words) - 1)]
 
       output_tokens[index] = masked_token
 

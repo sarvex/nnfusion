@@ -214,8 +214,7 @@ def parse(code, parameters):
     for (i, dtype) in enumerate(parameters["dtype"]):
         assert dtype == arguments["dtype"][i]
         if parameters["symbol"][i] != arguments["symbol"][i]:
-            new_code = "{} {} = {};\n".format(
-                dtype, arguments["symbol"][i], parameters["symbol"][i]) + new_code
+            new_code = f'{dtype} {arguments["symbol"][i]} = {parameters["symbol"][i]};\n{new_code}'
 
     for m in re_sharedmem.finditer(code):
         new_code = new_code.replace(m.group(0), "")

@@ -35,8 +35,7 @@ class MLP(nn.Module):
         x = x.view(-1, 28 * 28)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        output = F.log_softmax(self.fc3(x), dim=1)
-        return output
+        return F.log_softmax(self.fc3(x), dim=1)
 
 
 def test_executor():
@@ -113,9 +112,9 @@ def test_runner():
     point3 = time.time()
     out3 = runner(tensor3)[0].cpu().numpy()
     point4 = time.time()
-    print("Duration1: {}s".format(point2 - point1))
-    print("Duration2: {}s".format(point3 - point2))
-    print("Duration3: {}s".format(point4 - point3))
+    print(f"Duration1: {point2 - point1}s")
+    print(f"Duration2: {point3 - point2}s")
+    print(f"Duration3: {point4 - point3}s")
     assert np.allclose(out1, out3)
 
 
@@ -184,8 +183,7 @@ def eval():
         with torch.no_grad():
             pred = model(batch[0].to(device))
             prob = np_softmax(pred.cpu().numpy())
-            print('Image {} is digit "{}", confidence {}'.format(
-                i, np.argmax(prob), np.max(prob)))
+            print(f'Image {i} is digit "{np.argmax(prob)}", confidence {np.max(prob)}')
 
         res.append(np.argmax(prob))
         if i == 5:

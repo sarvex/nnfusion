@@ -21,13 +21,13 @@ loss_name = "total_loss"
 
 class NNFTrainer:
     def __init__(self):
-        self.parambyid = dict()
+        self.parambyid = {}
         # lastid = 0
-        paramlist = list()
-        siglist = list()
+        paramlist = []
+        siglist = []
         torch.cuda.set_device(cuda0)
         self.loss_id = 0
-        self.inputs_name_id = dict()
+        self.inputs_name_id = {}
         self.weight_ids = set()
 
         # Should load info from var_info.json
@@ -54,17 +54,16 @@ class NNFTrainer:
                 self.parambyid[id] = (shape, dtype)
                 if key == loss_name:
                     self.loss_id = id
-    
+
         for key in sorted(self.parambyid):
             # inititalizer
             (shape, dtype) = self.parambyid[key]
             if dtype == "float":
                 dtype = torch.float
+            elif dtype == "int64_t":
+                dtype = torch.int64
             else:
-                if dtype == "int64_t":
-                    dtype = torch.int64
-                else:
-                    raise Exception("Dtype is not suppported: %s" % (dtype))
+                raise Exception(f"Dtype is not suppported: {dtype}")
             param = torch.ones(shape, dtype=dtype, device=cuda0)
             if key in self.weight_ids:
                 torch.nn.init.uniform_(param)
@@ -109,7 +108,7 @@ class NaiveBertDataLoader:
         "masked_lm_positions": "masked_lm_positions", "masked_lm_ids": "masked_lm_ids",
         "masked_lm_weights": "masked_lm_weights", "next_sentence_labels": "label"}
 
-        inputs = dict()
+        inputs = {}
         for key, val in trainer.inputs_name_id.items():
             if key in name_map and name_map[key] in batch:
                 inputs[val] = batch[name_map[key]]
@@ -117,11 +116,10 @@ class NaiveBertDataLoader:
                 (shape, dtype) = trainer.parambyid[val]
                 if dtype == "float":
                     dtype = torch.float
+                elif dtype == "int64_t":
+                    dtype = torch.int64
                 else:
-                    if dtype == "int64_t":
-                        dtype = torch.int64
-                    else:
-                        raise Exception("Dtype is not suppported: %s" % (dtype))
+                    raise Exception(f"Dtype is not suppported: {dtype}")
                 inputs[val] = torch.ones(shape, dtype=dtype, device=cuda0)
 
         # # input1, input_ids, 1536
@@ -152,10 +150,8 @@ class NaiveBertDataLoader:
 if __name__ == "__main__":
     trainer = NNFTrainer()
     data = NaiveBertDataLoader()
-    i = 0
-    for batch in data.data:
+    for i, batch in enumerate(data.data):
         print(i)
-        i+= 1
         data.interation(batch, trainer)
 
     trainer.save()

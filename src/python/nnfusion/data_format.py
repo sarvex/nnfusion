@@ -19,10 +19,7 @@ class DataFormat(object):
     def __init__(self, pointer, pointer_type, shape, dtype, reference=None):
         self._pointer = pointer
         self._pointer_type = pointer_type
-        if len(shape) > 0:
-            self._shape = tuple(shape)
-        else:
-            self._shape = (1, )
+        self._shape = tuple(shape) if len(shape) > 0 else (1, )
         self._dtype = dtype
         self._reference = reference
 

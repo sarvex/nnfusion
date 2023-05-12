@@ -24,11 +24,11 @@ class TestCase:
     def allclose(self, result):
         if np.allclose(result, self.ground_truth, rtol=self.rtol, atol=self.atol):
             return True
-        logging.error("%s has wrong result." % (self.casename))
+        logging.error(f"{self.casename} has wrong result.")
         return False
 
     def valid(self):
         if not os.path.exists(self.get_filename()):
-            logging.error("%s file not existed." % (self.get_filename()))
+            logging.error(f"{self.get_filename()} file not existed.")
             return False
         return True

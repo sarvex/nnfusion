@@ -6,9 +6,7 @@ from torchvision import datasets, transforms
 
 
 def get_mnist_dataloader(**kwargs):
-    data_config = {'num_workers': 1, 'pin_memory': True, 'shuffle': True}
-    data_config.update(kwargs)
-
+    data_config = {'num_workers': 1, 'pin_memory': True, 'shuffle': True} | kwargs
     transform = transforms.Compose(
         [transforms.ToTensor(),
          transforms.Normalize((0.1307, ), (0.3081, ))])

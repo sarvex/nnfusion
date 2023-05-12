@@ -175,7 +175,7 @@ class CNNModel(Model):
     calling load_backbone_model, with correct variable name mapping to load
     variables from checkpoint correctly into the current model.
     """
-    raise NotImplementedError(self.getName() + ' does not have backbone model.')
+    raise NotImplementedError(f'{self.getName()} does not have backbone model.')
 
   def load_backbone_model(self, sess, backbone_model_path):
     """Loads variable values from a pre-trained backbone model.
@@ -188,7 +188,7 @@ class CNNModel(Model):
       backbone_model_path: path to backbone model checkpoint file.
     """
     del sess, backbone_model_path
-    raise NotImplementedError(self.getName() + ' does not have backbone model.')
+    raise NotImplementedError(f'{self.getName()} does not have backbone model.')
 
   def add_inference(self, cnn):
     """Adds the core layers of the CNN's forward pass.
@@ -226,14 +226,16 @@ class CNNModel(Model):
         dtype=self.data_type,
         mean=127,
         stddev=60,
-        name=self.model_name + '_synthetic_inputs')
+        name=f'{self.model_name}_synthetic_inputs',
+    )
     inputs = tf.contrib.framework.local_variable(inputs, name=input_name)
     labels = tf.random_uniform(
         label_shape,
         minval=0,
         maxval=nclass - 1,
         dtype=tf.int32,
-        name=self.model_name + '_synthetic_labels')
+        name=f'{self.model_name}_synthetic_labels',
+    )
     return (inputs, labels)
 
   def build_network(self,

@@ -103,9 +103,7 @@ class ArgMaxTest(OperatorTestBase, ArgMax):
     def create_topk_test_random_float(self):
         import torch
         shape = [1, 2048]
-        self["input"] = {}
-        self["input"]["shape"] = [shape]
-        self["input"]["dtype"] = ["float32"]
+        self["input"] = {"shape": [shape], "dtype": ["float32"]}
         self["axis"] = 1
         self["keepdims"] = 0
 

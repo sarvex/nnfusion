@@ -18,8 +18,7 @@ class ModelWithLoss(nn.Module):
 
     def forward(self, data, target):
         output = self.model(data)
-        loss = self.loss_func(output, target)
-        return loss
+        return self.loss_func(output, target)
 
 
 class PTTrainer(object):
@@ -66,7 +65,7 @@ class PTTrainer(object):
             }) + '\'',  # training optimizer configs
         }
         self._codegen_flags = trainer_flags
-        self._codegen_flags.update(copy.deepcopy(codegen_flags) or {})
+        self._codegen_flags |= (copy.deepcopy(codegen_flags) or {})
         self.runner = PTRunner(self.model_with_loss,
                                codegen_flags=self._codegen_flags,
                                **kwargs)

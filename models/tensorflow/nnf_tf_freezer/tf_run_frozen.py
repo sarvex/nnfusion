@@ -16,7 +16,7 @@ parser.add_argument('--xla', type=bool, default=False, help='Enable XLA?')
 args = parser.parse_args()
 
 if not os.path.exists(args.file):
-    parser.exit(1, 'The specified file does not exist: {}'.format(args.file))
+    parser.exit(1, f'The specified file does not exist: {args.file}')
 
 graph_def = None
 graph = None
@@ -27,7 +27,7 @@ try:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
 except BaseException as e:
-    parser.exit(2, 'Error loading the graph definition: {}'.format(str(e)))
+    parser.exit(2, f'Error loading the graph definition: {str(e)}')
 
 print('Importing graph ...', file=sys.stderr)
 try:
@@ -42,7 +42,7 @@ try:
             producer_op_list=None
         )
 except BaseException as e:
-    parser.exit(2, 'Error importing the graph: {}'.format(str(e)))
+    parser.exit(2, f'Error importing the graph: {str(e)}')
 
 print()
 print('Operations:')
@@ -54,17 +54,13 @@ for op in ops:
     print('- {0:20s} "{1}" ({2} outputs)'.format(op.type, op.name, len(op.outputs)))
     last_nodes = op.outputs
     if op.type == 'Placeholder':
-        for node in op.outputs:
-            input_nodes.append(node)
-
+        input_nodes.extend(iter(op.outputs))
 print()
 print('Sinks (operations without outputs):')
 last_outputs = []
 num_nodes = len(ops)
-name2nodeIdx_map = {}
-for i in range(num_nodes):
-    name2nodeIdx_map[ops[i].name] = i
-node_outputs_ = [[] for i in range(num_nodes)]
+name2nodeIdx_map = {ops[i].name: i for i in range(num_nodes)}
+node_outputs_ = [[] for _ in range(num_nodes)]
 for n in range(num_nodes):
 #    if len(ops[n].outputs) > 0:
 #        last_outputs.append(ops[n].outputs[0])
@@ -77,7 +73,7 @@ for n in range(num_nodes):
     if len(node_outputs_[n]) == 0 and ops[n].type != 'NoOp' and ops[n].type != 'Assert':
         print('- {0:20s} {1}'.format(ops[n].type, ops[n].name))
         last_outputs.append(ops[n].outputs[0])
-        
+
 
 
 
@@ -114,13 +110,13 @@ with tf.Session(graph=graph, config=config) as sess:
     logits = last_nodes[-1]
     import numpy as np
     import time
-    feed_dict = {}
-    for node in input_nodes:
-        feed_dict[node] = np.ones(node.shape, dtype=node.dtype.as_numpy_dtype())
-        #feed_dict[node] = np.ones((20,64), dtype=node.dtype.as_numpy_dtype())
+    feed_dict = {
+        node: np.ones(node.shape, dtype=node.dtype.as_numpy_dtype())
+        for node in input_nodes
+    }
     #print('>> Output Shape =', logits.shape)
     #print('>> Output Value =', sess.run(last_outputs, feed_dict=feed_dict))
-    for warmup in range(args.warmup):
+    for _ in range(args.warmup):
         outputs = sess.run(last_outputs, feed_dict=feed_dict)
         for i in range(len(outputs)):
             out_flat = outputs[i].flat
@@ -135,7 +131,7 @@ with tf.Session(graph=graph, config=config) as sess:
     print('>> Evaluating Benchmark ...')
     num_steps = args.iters
     t_start = time.time()
-    for step in range(num_steps):
+    for _ in range(num_steps):
         sess.run(last_outputs, feed_dict=feed_dict)
     t_end = time.time()
     print('>> Average time for each run: %.4f ms;' % ((t_end - t_start) * 1e3 / num_steps))

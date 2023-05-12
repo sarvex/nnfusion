@@ -18,9 +18,7 @@ import socket
 
 class TestsManager:
     def __init__(self):
-        config_json = "config.json"
-        if len(sys.argv) == 2:
-            config_json = sys.argv[1]
+        config_json = sys.argv[1] if len(sys.argv) == 2 else "config.json"
         self.load_config(config_json)
 
         # overwrite if config.json specified
@@ -44,15 +42,15 @@ class TestsManager:
         # is a dict()
         self.enabled_tags = self.user_enabled_tags
 
-        logging.info("models folder = " + self.models)
-        logging.info("testcase configs folder = " + self.testcase_configs)
-        logging.info("nnfusion cli = " + self.nnfusion_cli)
+        logging.info(f"models folder = {self.models}")
+        logging.info(f"testcase configs folder = {self.testcase_configs}")
+        logging.info(f"nnfusion cli = {self.nnfusion_cli}")
         logging.info("device capability = " + ",".join(list(self.capability)))
-        logging.info("enabled tags = " + str(self.enabled_tags))
+        logging.info(f"enabled tags = {str(self.enabled_tags)}")
 
     def load_config(self, config_json):
         self.user_device_capability = set()
-        self.user_enabled_tags = dict()
+        self.user_enabled_tags = {}
         self.models = ""
         self.nnfusion_cli = ""
         self.nnfusion_args = ""
@@ -64,7 +62,7 @@ class TestsManager:
             if not os.path.exists(config_json):
                 return
 
-        logging.info("load config from: " + config_json)
+        logging.info(f"load config from: {config_json}")
         with open(config_json, 'r') as f:
             data = json.load(f)
 
@@ -76,16 +74,15 @@ class TestsManager:
                     if 'set' in env_ops[env].keys():
                         os.environ[env] = str(env_ops[env]['set'])
                     if 'append' in env_ops[env].keys():
-                        if os.getenv(env) is None:
-                            os.environ[env] = str(env_ops[env]['append'])
-                        else:
-                            os.environ[env] = os.getenv(
-                                env) + ":" + str(env_ops[env]['append'])
+                        os.environ[env] = (
+                            str(env_ops[env]['append'])
+                            if os.getenv(env) is None
+                            else f"{os.getenv(env)}:" + str(env_ops[env]['append'])
+                        )
                     if 'clear' in env_ops[env].keys():
                         os.environ[env] = ""
-                    if 'del' in env_ops[env].keys():
-                        if env in os.environ.keys():
-                            del os.environ[env]
+                    if 'del' in env_ops[env].keys() and env in os.environ:
+                        del os.environ[env]
 
                     logging.info("\t" + env + " = " + str(os.environ[env]))
 
@@ -113,7 +110,7 @@ class TestsManager:
             __file__)), "../../../build/src/tools/nnfusion/nnfusion"), "/usr/local/bin/nnfusion"]
         for nnf in nnf_clis:
             if os.path.exists(nnf):
-                print("NNFusion CLI detected: " + nnf)
+                print(f"NNFusion CLI detected: {nnf}")
                 return nnf
         logging.error("No nnfusion cli available.")
         exit(1)
@@ -124,7 +121,7 @@ class TestsManager:
             os.path.abspath(__file__)), "../../../models/frozenmodels")]
         for models in models_path:
             if os.path.exists(models):
-                print("models/ folder detected: " + models)
+                print(f"models/ folder detected: {models}")
                 return models
         logging.error("No models folder available.")
         exit(1)
@@ -149,11 +146,7 @@ class TestsManager:
         tests = testcases.load_tests(self.models, self.testcase_configs)
         newlist = []
         for test in tests:
-            avail = False
-            for tag in test.tags:
-                if tag in enabled_tags:
-                    avail = True
-                    break
+            avail = any(tag in enabled_tags for tag in test.tags)
             if avail:
                 newlist.append(test)
         return newlist
@@ -183,9 +176,7 @@ class TestsManager:
         print("\n\n=========================================\n")
         report = ("\n".join(report_list))
         print(report)
-        if "Failed" in report:
-            return -1
-        return 0
+        return -1 if "Failed" in report else 0
 
 
 if __name__ == "__main__":

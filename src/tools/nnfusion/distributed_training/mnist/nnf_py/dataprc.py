@@ -11,13 +11,10 @@ rank = comm.Get_rank()
 def get_dataloader(device_id, world_size):
 
     batch_size = 3
-    kwargs = {'batch_size': batch_size}
-
-    kwargs.update({'num_workers': 1,
-                   'pin_memory': True,
-                   },
-                  )
-
+    kwargs = {'batch_size': batch_size} | {
+        'num_workers': 1,
+        'pin_memory': True,
+    }
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,))

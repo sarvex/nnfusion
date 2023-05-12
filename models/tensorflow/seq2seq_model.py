@@ -46,8 +46,9 @@ class Seq2SeqModel(object):
         rnn_cell = tf.nn.rnn_cell.BasicLSTMCell
 
         # Construct forward/backward RNN cells.
-        fw_cell = rnn_cell(num_units=rnn_hidden_size,
-                           name="encoder_rnn_fw_{}".format(layer_id))
+        fw_cell = rnn_cell(
+            num_units=rnn_hidden_size, name=f"encoder_rnn_fw_{layer_id}"
+        )
 
         rnn_outputs, _ = tf.nn.static_rnn(
             fw_cell, inputs, dtype=tf.float32)
@@ -65,23 +66,20 @@ class Seq2SeqModel(object):
         rnn_cell = tf.nn.rnn_cell.BasicLSTMCell
         cells = []
         for layer_counter in range(self.num_decoder_layer):
-            cell = rnn_cell(num_units=self.hidden_size,
-                            name="decoder_rnn_fw_{}".format(layer_counter))
+            cell = rnn_cell(
+                num_units=self.hidden_size, name=f"decoder_rnn_fw_{layer_counter}"
+            )
             cells.append(cell)
-        if len(cells) > 1:
-            final_cell = ExtendedMultiRnnCell(cells)
-        else:
-            final_cell = cells[0]
-
-        cur_states = []
-        for i in range(len(cells)):
-            cur_states.append(cells[i].zero_state(self.batch_size, dtype=tf.float32))
+        final_cell = ExtendedMultiRnnCell(cells) if len(cells) > 1 else cells[0]
+        cur_states = [
+            cell_.zero_state(self.batch_size, dtype=tf.float32) for cell_ in cells
+        ]
         if len(cur_states) == 1:
             cur_states=cur_states[0]
 
         cur_input = inputs[0]
 
-        for step in range(self.decoder_step):
+        for _ in range(self.decoder_step):
             next_input, next_states = final_cell(cur_input, cur_states)
             cur_input = next_input
             cur_states = next_states
@@ -90,8 +88,6 @@ class Seq2SeqModel(object):
 
     def __call__(self, inputs):
         encoder_state = self._build_encoder(inputs)
-        decoder_state = self._build_decoder(encoder_state)
-
-        return decoder_state
+        return self._build_decoder(encoder_state)
 
 

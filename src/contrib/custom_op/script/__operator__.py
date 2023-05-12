@@ -72,7 +72,7 @@ class OperatorSingleOutputAsOneInput(OperatorBase):
 
 # Try loading every operators
 def load_operators(baseclasses = OperatorBase):
-    operator_map = dict()
+    operator_map = {}
     for file in os.listdir(os.path.dirname(__file__)):
         if file.endswith(".py") and not file.startswith("__"):
             try:
@@ -102,17 +102,11 @@ def load_operator_by_name(op_name):
     global op_map
     if op_map is None:
         op_map = load_operators()
-    if op_name in op_map.keys():
-        op = op_map[op_name]
-        return op
-    else:
-        return None
+    return op_map[op_name] if op_name in op_map.keys() else None
 
 def get_operator_config(op_name, conf_dict):
     op_type = load_operator_by_name(op_name)
-    if op_type is not None:
-        return op_type(conf_dict)
-    return {}
+    return op_type(conf_dict) if op_type is not None else {}
 
 def get_operator_tests(op_name):
     global op_map
@@ -123,44 +117,40 @@ def get_operator_tests(op_name):
             # Generate all tests
             op_obj = op_map[op]()
             F = [getattr(op_obj, m) for m in dir(op_obj) if not m.startswith('__')]
-            allclose = None
-            for ac in F:
-                if ac.__name__ == "allclose":
-                   allclose = ac
-                   break
+            allclose = next((ac for ac in F if ac.__name__ == "allclose"), None)
             for create_test_method in [f for f in F if type(f) is MethodType and f.__name__.startswith("create_")]:
                 test_case = create_test_method()
                 test_case["test"] = create_test_method.__name__[7:]
                 if "allclose" not in test_case:
                     test_case["allclose"] = allclose
                 test_cases.append(test_case)
-            
-            
+
+
     return test_cases
 
 def get_type_info(typestr):
-    if typestr == "half" or typestr == "float16":
+    if typestr in ["half", "float16"]:
         return ("float16_t", 2, np.finfo(np.float16).min, np.finfo(np.float16).max)
-    if typestr == "float32" or typestr == "float":
+    if typestr in ["float32", "float"]:
         return ("float", 4, np.finfo(np.float32).min, np.finfo(np.float32).max)
     if typestr == "double":
         return ("double", 8, np.finfo(np.double).min, np.finfo(np.double).max)
-    if typestr == "int" or typestr == "int32" or typestr == "int32_t":
+    if typestr in ["int", "int32", "int32_t"]:
         return ("int", 4, np.iinfo(np.int32).min, np.iinfo(np.int32).max)
-    if typestr == "int64" or typestr == "long long" or typestr == "int64_t":
+    if typestr in ["int64", "long long", "int64_t"]:
         return ("int64_t", 8, np.iinfo(np.int64).min, np.iinfo(np.int64).max)
     exit(-1)
 
 def get_antares_type_str(typestr):
-    if typestr == "half" or typestr == "float16":
+    if typestr in ["half", "float16"]:
         return "float16"
-    if typestr == "float32" or typestr == "float":
+    if typestr in ["float32", "float"]:
         return "float32"
     if typestr == "double":
         return "float64"
-    if typestr == "int" or typestr == "int32":
+    if typestr in ["int", "int32"]:
         return "int32"
-    if typestr == "int64" or typestr == "int64_t" or typestr == "long long":
+    if typestr in ["int64", "int64_t", "long long"]:
         return "int64"
 
 def read_file(file_name):

@@ -12,7 +12,7 @@ def import_nnfusion():
         with open(sys.argv[1], "rb") as f:
             graph_def.ParseFromString(f.read())
     except IOError:
-        print(sys.argv[1] + ": File not found.  Creating a new file.")
+        print(f"{sys.argv[1]}: File not found.  Creating a new file.")
     with open(sys.argv[2], "w+") as f:
         f.write(str(graph_def))
     return graph_def

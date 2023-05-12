@@ -25,7 +25,7 @@ parser.add_argument('--logger_severity', type=int, default=2, help='onnxruntime.
 args = parser.parse_args()
 
 if not os.path.exists(args.file):
-    parser.exit(1, 'The specified file does not exist: {}'.format(args.file))
+    parser.exit(1, f'The specified file does not exist: {args.file}')
 
 try:
     onnx.checker.check_model(args.file)
@@ -60,7 +60,7 @@ def get_numpy(tensor):
         elif 'bool' in onnx_dtype:
             return np.bool_
         else:
-            raise NotImplementedError(onnx_dtype + " is not supported in this script yet.")
+            raise NotImplementedError(f"{onnx_dtype} is not supported in this script yet.")
         return np.float32
 
     def check_shape(shape):
@@ -108,14 +108,11 @@ print("Execution Providers:", ort_session.get_providers())
 
 inputs = ort_session.get_inputs()
 inputs_name = [item.name for item in inputs]
-ort_inputs = {}
-for tensor in inputs:
-    ort_inputs.update({tensor.name: get_numpy(tensor)})
-
+ort_inputs = {tensor.name: get_numpy(tensor) for tensor in inputs}
 outputs = ort_session.get_outputs()
 outputs_name = [item.name for item in outputs]
 
-for warmup in range(args.warmup):
+for _ in range(args.warmup):
     outputs = ort_session.run(outputs_name, ort_inputs)
     for i in range(len(outputs)):
         out_flat = outputs[i].flat
@@ -130,7 +127,7 @@ for warmup in range(args.warmup):
 if args.iters > 0:
     print('>> Evaluating Benchmark ...')
     t_start = time.time()
-    for step in range(args.iters):
+    for _ in range(args.iters):
         ort_session.run(outputs_name, ort_inputs)
     t_end = time.time()
     print('>> Average time for each run: %.4f ms;' % ((t_end - t_start) * 1e3 / args.iters))

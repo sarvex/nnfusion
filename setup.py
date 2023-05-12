@@ -15,8 +15,9 @@ if sys.version_info < (3, ):
 python_min_version = (3, 5, 2)
 python_min_version_str = '.'.join(map(str, python_min_version))
 if sys.version_info < python_min_version:
-    print("You are using Python {}. Python >={} is required.".format(
-        platform.python_version(), python_min_version_str))
+    print(
+        f"You are using Python {platform.python_version()}. Python >={python_min_version_str} is required."
+    )
     sys.exit(-1)
 
 nnf_bin = "build/src/tools/nnfusion/nnfusion"
@@ -43,7 +44,7 @@ def get_data_files(source_dir, ignore_list):
     pairs = [
         dir_files_pair(root, files)
         for root, dir, files in os.walk(source_dir)
-        if not any(word in root for word in ignore_list)
+        if all(word not in root for word in ignore_list)
     ]
     # Remove if files is empty
     return [

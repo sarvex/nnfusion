@@ -22,7 +22,7 @@ parser.add_argument('--logger_severity', type=int, default=2, help='onnxruntime.
 args = parser.parse_args()
 
 if not os.path.exists(args.file):
-    parser.exit(1, 'The specified file does not exist: {}'.format(args.file))
+    parser.exit(1, f'The specified file does not exist: {args.file}')
 
 onnx.checker.check_model(args.file)
 print("ONNX model check passed!")
@@ -53,7 +53,7 @@ def get_numpy(tensor):
         elif 'bool' in onnx_dtype:
             return np.bool_
         else:
-            raise NotImplementedError(onnx_dtype + " is not supported in this script yet.")
+            raise NotImplementedError(f"{onnx_dtype} is not supported in this script yet.")
         return np.float32
 
     def check_shape(shape):
@@ -64,7 +64,7 @@ def get_numpy(tensor):
                 raise Exception(f"Unknown symbilic dimension: {dim}")
             else:
                 raise Exception(f"Unknown dimension type: {type(dim)}")
-    
+
     dtype = get_numpy_dtype(tensor.type)
     shape = tensor.shape
     check_shape(shape)
@@ -78,7 +78,9 @@ for node_id in range(len(model.graph.node)):
         debug_tensor = onnx.helper.ValueInfoProto()
         debug_tensor.name = node_outputs[output_id]
         model.graph.output.append(debug_tensor)
-        node_name_dict.update({debug_tensor.name: model.graph.node[node_id].name+'_'+str(output_id)})
+        node_name_dict[
+            debug_tensor.name
+        ] = f'{model.graph.node[node_id].name}_{str(output_id)}'
 
 print("Importing ONNX model into ONNX Runtime...")
 ort.set_default_logger_severity(args.logger_severity)
@@ -107,14 +109,11 @@ print("Execution Providers:", ort_session.get_providers())
 
 inputs = ort_session.get_inputs()
 inputs_name = [item.name for item in inputs]
-ort_inputs = {}
-for tensor in inputs:
-    ort_inputs.update({tensor.name: get_numpy(tensor)})
-
+ort_inputs = {tensor.name: get_numpy(tensor) for tensor in inputs}
 outputs = ort_session.get_outputs()
 outputs_name = [item.name for item in outputs]
 
-for step in range(1):
+for _ in range(1):
     outputs = ort_session.run(outputs_name, ort_inputs)
     for i in range(len(outputs)):
         out_flat = outputs[i].flat

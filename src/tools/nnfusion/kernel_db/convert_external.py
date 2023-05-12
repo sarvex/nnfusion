@@ -102,16 +102,13 @@ def gen_key(data, dtype="float"):
                                          for shape in out_shape * 2) + "float" * 2 * len(out_shape)
             else:
                 raise ("to be specified")
-    elif op_type == "AvgPool" or op_type == "MaxPool":
+    elif op_type in ["AvgPool", "MaxPool"]:
         key += "Shape{" + ", ".join(str(i)
                                     for i in parameters["window_shape"]) + "}"
         key += "Strides{" + ", ".join(str(i)
                                       for i in parameters["window_stride"]) + "}"
         key += "Shape{" + ", ".join(str(i)
                                     for i in parameters["padding_below"]) + "}"
-    else:
-        pass
-
     return key
 
 
@@ -150,7 +147,7 @@ def gen_config(op_type, kernel, shared_memory, num_sync):
         config["in_shape"] = [kernel["parameters"]["input_shape"]]
         config["out_shape"] = [kernel["parameters"]["output_shape"]]
         config["function_signature"] = "extern \"C\" __global__  void (float* input0, float* output0)"
-    elif (op_type == "AvgPool" or op_type == "MaxPool"):
+    elif op_type in ["AvgPool", "MaxPool"]:
         config["in_shape"] = [kernel["parameters"]["input_shape"]]
         config["out_shape"] = [kernel["parameters"]["output_shape"]]
         config["function_signature"] = "extern \"C\" __global__  void (float* input0, float* output0)"
@@ -167,40 +164,41 @@ def gen_config(op_type, kernel, shared_memory, num_sync):
 
 def insert_db(name, resource, platform="CUDA_GPU", tags="", profile="Tesla V100-PCIE-16GB:1"):
     # Todo: More tags could be used to store multiple implementations with the same kernel specs
-    in_file = open(name + ".cu")
-    json_file = open(name + ".json")
+    in_file = open(f"{name}.cu")
+    json_file = open(f"{name}.json")
 
     data = json.load(json_file)
     block_function_body = in_file.read()
     data["block_function_body"] = block_function_body
 
-    
+
     key = data["function_body"]
     identifier = gen_key(data)
     op_type = data["op_type"]
     source = "External"
     device_type = platform
 
-    attributes_dict = {}
-    attributes_dict.update({"input_shape": data["in_shape"]})
-    attributes_dict.update({"output_shape": data["out_shape"]})
+    attributes_dict = {
+        "input_shape": data["in_shape"],
+        "output_shape": data["out_shape"],
+    }
     if data.get("parameters") != None:
-        attributes_dict.update({"parameters": data["parameters"]})
+        attributes_dict["parameters"] = data["parameters"]
     attributes = json.dumps(attributes_dict)
 
-    function_dict = {}
-    function_dict.update({"function_signature": data["function_signature"]})
-    function_dict.update({"function_body": data["function_body"]})
-    function_dict.update({"grid_dim": data["gridDim"]})
-    function_dict.update({"block_dim": data["blockDim"]})
-    function_dict.update({"block_function_body": data["block_function_body"]})
-    function_dict.update({"shared_memory": data["shared_memory"]})
-    function_dict.update({"num_syncthreads": data["num_syncthreads"]})
+    function_dict = {
+        "function_signature": data["function_signature"],
+        "function_body": data["function_body"],
+        "grid_dim": data["gridDim"],
+        "block_dim": data["blockDim"],
+        "block_function_body": data["block_function_body"],
+        "shared_memory": data["shared_memory"],
+        "num_syncthreads": data["num_syncthreads"],
+    }
     function = json.dumps(function_dict)
 
-    miscs_dict = {}
     profile_dict = {"time": profile, "resource": resource}
-    miscs_dict.update({"external_profile": profile_dict})
+    miscs_dict = {"external_profile": profile_dict}
     miscs = json.dumps(miscs_dict)
 
     conn = sqlite3.connect(db_path + db_name)
@@ -247,9 +245,8 @@ if __name__ == '__main__':
 
         config = gen_config(op_type, kernel, shared_memory, num_sync=0)
 
-        prepare_file(signature, sync_code, config,
-                     db_path + "profile/", parse=True)
-        num_sync = log_sync(signature, db_path + "profile/")
+        prepare_file(signature, sync_code, config, f"{db_path}profile/", parse=True)
+        num_sync = log_sync(signature, f"{db_path}profile/")
         config["num_syncthreads"] = num_sync
         config["function_body"] = func_body
 
@@ -263,8 +260,7 @@ if __name__ == '__main__':
         with open(operator_path + name + ".cu", "w+") as f:
             f.write(new_code)
 
-        default_tags = ""
-        default_tags += "KernelEmitter,CudaEmitter,BlockCudaEmitter"
+        default_tags = "" + "KernelEmitter,CudaEmitter,BlockCudaEmitter"
         if (op_type == "Dot"):
             # Todo: move the transpose information into identifier
             default_tags += kernel["parameters"]["transpose_A"] * \
@@ -274,8 +270,8 @@ if __name__ == '__main__':
         resource = math.ceil(
             prod(config["blockDim"])/32)*32 * prod(config["gridDim"])
 
-        prepare_file(signature, kernel["code"], config, db_path + "profile/")
-        profile_info = profile(signature, db_path + "profile/")
+        prepare_file(signature, kernel["code"], config, f"{db_path}profile/")
+        profile_info = profile(signature, f"{db_path}profile/")
         print(profile_info, resource, config["num_syncthreads"])
         insert_db(operator_path + name, resource,
                   tags=default_tags, profile=profile_info)

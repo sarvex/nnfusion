@@ -6,7 +6,7 @@ import testcases.naive_cases
 import testcases.cpu_perf_cases
 import testcases.perf_cases
 
-TestCases = list()
+TestCases = []
 
 tests_load_funtion = {
     "naive_case_single_line": testcases.naive_cases.create_naive_case_single_line, "naive_case_multi_lines": testcases.naive_cases.create_naive_case_multi_lines, 
@@ -19,12 +19,12 @@ def parse_tests(base_folder, json_data):
     # must-have fields
     if "type" in json_data:
         type = json_data["type"]
-        name = json_data["testcase"]
-
         if type in tests_load_funtion:
             test = tests_load_funtion[type](base_folder, json_data)
             TestCases.append(test)
-            logging.info("Load testcase: " + name)
+            name = json_data["testcase"]
+
+            logging.info(f"Load testcase: {name}")
 
     # read list of tests
     if "testcases" in json_data:
@@ -38,13 +38,13 @@ def load_all_tests(models, testcase_configs):
             name, suf = os.path.splitext(file)
             if suf == ".json":
                 file = os.path.join(root, file)
-                logging.info("found " + file)
+                logging.info(f"found {file}")
                 with open(file, 'r') as f:
                     data = json.load(f)
                     parse_tests(models, data)
 
 def load_tests(models, testcase_configs):
     global TestCases
-    TestCases = list()
+    TestCases = []
     load_all_tests(models, testcase_configs)
     return TestCases

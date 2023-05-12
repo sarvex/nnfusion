@@ -21,10 +21,8 @@ class Config(MutableMapping):
         locals_ = locals()
 
         self._storage = {
-            flag: locals_[flag]
-            for flag in self.__init__.__kwdefaults__
-        }
-        self._storage.update(dict(*args, **kwargs))
+            flag: locals_[flag] for flag in self.__init__.__kwdefaults__
+        } | dict(*args, **kwargs)
 
     @staticmethod
     def _parse_flag_value(flag, value):

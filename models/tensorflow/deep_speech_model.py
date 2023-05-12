@@ -77,9 +77,15 @@ def _conv_bn_layer(inputs, padding, filters, kernel_size, strides, layer_id,
       inputs,
       [[0, 0], [padding[0], padding[0]], [padding[1], padding[1]], [0, 0]])
   inputs = tf.layers.conv2d(
-      inputs=inputs, filters=filters, kernel_size=kernel_size, strides=strides,
-      padding="valid", use_bias=False, activation=tf.nn.relu6,
-      name="cnn_{}".format(layer_id))
+      inputs=inputs,
+      filters=filters,
+      kernel_size=kernel_size,
+      strides=strides,
+      padding="valid",
+      use_bias=False,
+      activation=tf.nn.relu6,
+      name=f"cnn_{layer_id}",
+  )
   return batch_norm(inputs, training)
 
 
@@ -95,10 +101,8 @@ def _rnn_layer(inputs, rnn_cell, rnn_hidden_size, seq_length, layer_id):
     tensor output for the current layer.
   """
   # Construct forward/backward RNN cells.
-  fw_cell = rnn_cell(num_units=rnn_hidden_size,
-                     name="rnn_fw_{}".format(layer_id))
-  bw_cell = rnn_cell(num_units=rnn_hidden_size,
-                     name="rnn_bw_{}".format(layer_id))
+  fw_cell = rnn_cell(num_units=rnn_hidden_size, name=f"rnn_fw_{layer_id}")
+  bw_cell = rnn_cell(num_units=rnn_hidden_size, name=f"rnn_bw_{layer_id}")
 
   rnn_outputs, _ = tf.nn.static_rnn(
       fw_cell, inputs, dtype=tf.float32)
@@ -163,7 +167,5 @@ class DeepSpeech2(object):
 
     # FC layer with batch norm.
     inputs = batch_norm(inputs, training)
-    logits = tf.layers.dense(inputs, self.num_classes, use_bias=self.use_bias)
-
-    return logits
+    return tf.layers.dense(inputs, self.num_classes, use_bias=self.use_bias)
 

@@ -18,8 +18,7 @@ class PerfOutput(TestCase):
         return True
     
     def latency(self, raw_strdata):
-        real_time = float(raw_strdata[-1].strip("\n").split(" ")[-2][:-1])
-        return real_time
+        return float(raw_strdata[-1].strip("\n").split(" ")[-2][:-1])
         #return raw_strdata[-1]
 
 
@@ -27,8 +26,5 @@ def create_perf_case(base_folder, json_data):
     testcase = json_data["testcase"]
     tags = json_data["tag"]
     filename = os.path.join(base_folder, json_data["filename"])
-    flag = ""
-    if "flag" in json_data:
-        flag = json_data["flag"]
-
+    flag = json_data["flag"] if "flag" in json_data else ""
     return PerfOutput(testcase, filename, tags, flag)

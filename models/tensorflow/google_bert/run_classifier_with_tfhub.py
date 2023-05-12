@@ -93,7 +93,7 @@ def model_fn_builder(num_labels, learning_rate, num_train_steps,
 
     tf.logging.info("*** Features ***")
     for name in sorted(features.keys()):
-      tf.logging.info("  name = %s, shape = %s" % (name, features[name].shape))
+      tf.logging.info(f"  name = {name}, shape = {features[name].shape}")
 
     input_ids = features["input_ids"]
     input_mask = features["input_mask"]
@@ -135,8 +135,7 @@ def model_fn_builder(num_labels, learning_rate, num_train_steps,
       output_spec = tf.contrib.tpu.TPUEstimatorSpec(
           mode=mode, predictions={"probabilities": probabilities})
     else:
-      raise ValueError(
-          "Only TRAIN, EVAL and PREDICT modes are supported: %s" % (mode))
+      raise ValueError(f"Only TRAIN, EVAL and PREDICT modes are supported: {mode}")
 
     return output_spec
 
@@ -172,7 +171,7 @@ def main(_):
   task_name = FLAGS.task_name.lower()
 
   if task_name not in processors:
-    raise ValueError("Task not found: %s" % (task_name))
+    raise ValueError(f"Task not found: {task_name}")
 
   processor = processors[task_name]()
 
@@ -255,7 +254,7 @@ def main(_):
       # the last batch.
       eval_steps = int(len(eval_examples) / FLAGS.eval_batch_size)
 
-    eval_drop_remainder = True if FLAGS.use_tpu else False
+    eval_drop_remainder = bool(FLAGS.use_tpu)
     eval_input_fn = run_classifier.input_fn_builder(
         features=eval_features,
         seq_length=FLAGS.max_seq_length,

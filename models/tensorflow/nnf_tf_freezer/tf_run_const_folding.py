@@ -17,8 +17,8 @@ parser.add_argument('--file', type=str, default='./frozen_graph.pb', help='The f
 args = parser.parse_args()
 
 if not os.path.exists(args.file):
-    parser.exit(1, 'The specified file does not exist: {}'.format(args.file))
-    
+    parser.exit(1, f'The specified file does not exist: {args.file}')
+
 graph_def = None
 graph = None
 
@@ -28,7 +28,7 @@ try:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
 except BaseException as e:
-    parser.exit(2, 'Error loading the graph definition: {}'.format(str(e)))
+    parser.exit(2, f'Error loading the graph definition: {str(e)}')
 
 print('Importing graph ...', file=sys.stderr)
 try:
@@ -43,8 +43,8 @@ try:
             producer_op_list=None
         )
 except BaseException as e:
-    parser.exit(2, 'Error importing the graph: {}'.format(str(e)))
-    
+    parser.exit(2, f'Error importing the graph: {str(e)}')
+
 print()
 print('Placeholders:')
 assert graph is not None
@@ -56,15 +56,13 @@ for op in ops:
         for tensor in op.outputs:
             print('- {0:20s} {1}'.format("Tensor", tensor.name))
             input_nodes.append(tensor.name)
-            
+
 print()
 print('Sinks (operations without outputs):')
 last_outputs = []
 num_nodes = len(ops)
-name2nodeIdx_map = {}
-for i in range(num_nodes):
-    name2nodeIdx_map[ops[i].name] = i
-node_outputs_ = [[] for i in range(num_nodes)]
+name2nodeIdx_map = {ops[i].name: i for i in range(num_nodes)}
+node_outputs_ = [[] for _ in range(num_nodes)]
 for n in range(num_nodes):
 #    if len(ops[n].outputs) > 0:
 #        last_outputs.append(ops[n].outputs[0])
@@ -77,12 +75,12 @@ for n in range(num_nodes):
     if len(node_outputs_[n]) == 0 and ops[n].type != 'NoOp' and ops[n].type != 'Assert':
         print('- {0:20s} {1}'.format(ops[n].type, ops[n].name))
         last_outputs.append(ops[n].outputs[0].name)
-    
+
 g_def_const = tf.import_graph_def(graph_def, name="")
 g_def_const = graph_transforms.TransformGraph(graph_def, input_nodes, last_outputs, ["fold_constants", "strip_unused_nodes", "merge_duplicate_nodes", "sort_by_execution_order"])
 
 print()
-folded_graph = args.file[:-3] + ".const_folded.pb"
-print("Saving Const-folded Graph... as " + folded_graph)
+folded_graph = f"{args.file[:-3]}.const_folded.pb"
+print(f"Saving Const-folded Graph... as {folded_graph}")
 graph_io.write_graph(as_text=False, name=folded_graph, logdir="./",graph_or_graph_def=g_def_const)
 print("Finished.")

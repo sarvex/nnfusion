@@ -76,9 +76,10 @@ class LSTMModel(object):
         self.stacked_cells = []
         self.num_layer = num_layer
         self.num_unit = hidden_size
-        for layer in range(self.num_layer):
-            self.stacked_cells.append(
-                LSTMCell(self.num_unit, "LSTMLayer%d" % (layer)))
+        self.stacked_cells.extend(
+            LSTMCell(self.num_unit, "LSTMLayer%d" % (layer))
+            for layer in range(self.num_layer)
+        )
 
     def run(self, inputs, batch_size, num_step):
         self.batch_size = batch_size
@@ -87,7 +88,7 @@ class LSTMModel(object):
         cell = tf.nn.rnn_cell.BasicLSTMCell(
             self.num_unit, forget_bias=1.0, state_is_tuple=True)
         self._initial_state = cell.zero_state(batch_size, tf.float32)
-        self.state = [self._initial_state for layer in range(self.num_layer)]
+        self.state = [self._initial_state for _ in range(self.num_layer)]
 
         for step in range(self.num_step):
             cur_input = inputs[step, :, :]

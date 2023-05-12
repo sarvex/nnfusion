@@ -98,13 +98,8 @@ class TemplateHLSLOperatorTest(OperatorTestBase, TemplateHLSLOperator):
         pass
 
     def create_add_test(self):
-        shape = []
-        for i in range(0, random.randint(1, 2)):
-            shape.append(random.randint(1000, 2048))
-        self["input"] = {}
-        self["input"]["shape"] = [shape, shape]
-        self["input"]["dtype"] = ["float32", "float32"]
-
+        shape = [random.randint(1000, 2048) for _ in range(0, random.randint(1, 2))]
+        self["input"] = {"shape": [shape, shape], "dtype": ["float32", "float32"]}
         a = np.ones(shape=shape, dtype=np.single)
         b = np.ones(shape=shape, dtype=np.single)
         c = a + b
@@ -112,13 +107,8 @@ class TemplateHLSLOperatorTest(OperatorTestBase, TemplateHLSLOperator):
         return {"kernel": TemplateHLSLOperator(self), "input": [a, b], "output": [c]}
 
     def create_add_test_copy(self):
-        shape = []
-        for i in range(0, random.randint(1, 2)):
-            shape.append(random.randint(1000, 2048))
-        self["input"] = {}
-        self["input"]["shape"] = [shape, shape]
-        self["input"]["dtype"] = ["float32", "float32"]
-
+        shape = [random.randint(1000, 2048) for _ in range(0, random.randint(1, 2))]
+        self["input"] = {"shape": [shape, shape], "dtype": ["float32", "float32"]}
         a = np.ones(shape=shape, dtype=np.single)
         b = np.ones(shape=shape, dtype=np.single)
         c = a + b

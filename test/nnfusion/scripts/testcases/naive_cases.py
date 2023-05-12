@@ -35,20 +35,19 @@ class TestMultiOutput(TestCase):
         self.flag = flag
 
     def extract_data(self, strs):
-        data = list()
+        data = []
         for i in range(1, len(strs), 2):
             try:
                 it = [float(v.strip())
                         for v in strs[i].strip().split("..")[0].strip().split(" ")]
                 data.append(it)
             except:
-                print("Unsupported output: " + strs[i].strip())
+                print(f"Unsupported output: {strs[i].strip()}")
                 break
         return data
 
     def all_allclose(self, a, b):
-        cnt = 0
-        for u in a:
+        for cnt, u in enumerate(a):
             flag = False
             for v in b:
                 if len(u) == len(v) and np.allclose(u, v, rtol=self.rtol, atol=self.atol):
@@ -56,12 +55,11 @@ class TestMultiOutput(TestCase):
             if not flag:
                 print("Mismatch#%d: %s" % (cnt, u))
                 return False
-            cnt += 1
         return True
 
     def allclose(self, raw_strdata):
         if not self.all_allclose(self.extract_data(raw_strdata), self.ground_truth):
-            logging.error("%s has wrong result." % (self.casename))
+            logging.error(f"{self.casename} has wrong result.")
             return False
         return True
 
@@ -71,9 +69,7 @@ def create_naive_case_single_line(base_folder, json_data):
     output = json_data["output"]
     tags = json_data["tag"]
     filename = os.path.join(base_folder, json_data["filename"])
-    flag = ""
-    if "flag" in json_data:
-        flag = json_data["flag"]
+    flag = json_data["flag"] if "flag" in json_data else ""
     return TestSingleOutput(testcase, output, filename, tags, flag)
 
 
@@ -82,8 +78,6 @@ def create_naive_case_multi_lines(base_folder, json_data):
     output = "\n".join(json_data["output"])
     tags = json_data["tag"]
     filename = os.path.join(base_folder, json_data["filename"])
-    flag = ""
-    if "flag" in json_data:
-        flag = json_data["flag"]
+    flag = json_data["flag"] if "flag" in json_data else ""
     return TestMultiOutput(testcase, output, filename, tags, flag)
 

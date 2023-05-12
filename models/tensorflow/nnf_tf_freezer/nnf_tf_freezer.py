@@ -46,8 +46,8 @@ class nnf_tf_freezer(object):
                 self.tf_run_frozen_graph(self.frozen_graph, self.xla, self.parallel, self.warmup, self.num_iter)
 
     def freeze(self, inputs : List[tf.placeholder], outputs : List[tf.identity], optimizer : tf.train.Optimizer=None):
-        print("Freeze graph ----------------------------------") 
-        varlist = []             
+        print("Freeze graph ----------------------------------")
+        varlist = []
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             if self.is_training:
@@ -71,12 +71,16 @@ class nnf_tf_freezer(object):
                     for ot in t.outputs:
                         outputs += [tf.identity(ot, name = 'nnfusion_grads/' + ot.name.split(':')[0])]
                     # outputs += grads
-                    for op in sess.graph_def.node:
-                        if "Apply" in str(op.op) or "Assign" in str(op.op) or "Scatter" in str(op.op):
-                            varlist.append(op.input[0])
+                    varlist.extend(
+                        op.input[0]
+                        for op in sess.graph_def.node
+                        if "Apply" in str(op.op)
+                        or "Assign" in str(op.op)
+                        or "Scatter" in str(op.op)
+                    )
                 varlist = ",".join(varlist)
                 if self.debug:
-                    print(varlist) 
+                    print(varlist)
             tf.train.write_graph(sess.graph_def, '/tmp/save', 'model.pbtxt')
             saver = tf.train.Saver(write_version=tf.train.SaverDef.V2)
             try:
@@ -84,16 +88,14 @@ class nnf_tf_freezer(object):
                 print('Using existing checkpoint.')
             except:
                 print('Not using existing checkpoint.')
-                pass
-
             saver_path = saver.save(sess, "/tmp/save/model.ckpt")
-            
+
             if self.to_fp16:
                 # convert graph to fp16 model
                 print('convert to fp16 model')
                 input_name = [input.name for input in inputs]
                 output_names = [output.name for output in outputs]
-                
+
                 new_graph = convert_graph_to_fp16(sess.graph_def, target_type='fp16', input_name=input_name, output_names=output_names)
                 tf.train.write_graph(new_graph, '/tmp/save', 'model.pbtxt')
 
@@ -124,7 +126,7 @@ class nnf_tf_freezer(object):
         print("run const folding----------------------------")
         tf.reset_default_graph()
         graph_def, graph = self.import_graph(file)
-            
+
         print()
         if (self.debug):
             print('Placeholders:')
@@ -138,16 +140,14 @@ class nnf_tf_freezer(object):
                     if (self.debug):
                         print('- {0:20s} {1}'.format("Tensor", tensor.name))
                     input_nodes.append(tensor.name)
-        
+
         if (self.debug):            
             print()
             print('Sinks (operations without outputs):')
         last_outputs = []
         num_nodes = len(ops)
-        name2nodeIdx_map = {}
-        for i in range(num_nodes):
-            name2nodeIdx_map[ops[i].name] = i
-        node_outputs_ = [[] for i in range(num_nodes)]
+        name2nodeIdx_map = {ops[i].name: i for i in range(num_nodes)}
+        node_outputs_ = [[] for _ in range(num_nodes)]
         for n in range(num_nodes):
             op = ops[n]
             pending_count = len(op.inputs)
@@ -174,8 +174,8 @@ class nnf_tf_freezer(object):
         g_def_const = graph_transforms.TransformGraph(graph_def, input_nodes, last_outputs, ["fold_constants", "strip_unused_nodes"])
 
         print()
-        self.folded_graph = file[:-3] + ".const_folded.pb"
-        print("Saving Const-folded Graph... as " + self.folded_graph)
+        self.folded_graph = f"{file[:-3]}.const_folded.pb"
+        print(f"Saving Const-folded Graph... as {self.folded_graph}")
         graph_io.write_graph(as_text=False, name=self.folded_graph, logdir="./",graph_or_graph_def=g_def_const)
         print("Finished.")
 
@@ -195,8 +195,7 @@ class nnf_tf_freezer(object):
                 print('- {0:20s} "{1}" ({2} outputs)'.format(op.type, op.name, len(op.outputs)))
             last_nodes = op.outputs
             if op.type == 'Placeholder':
-                for node in op.outputs:
-                    input_nodes.append(node)
+                input_nodes.extend(iter(op.outputs))
             if "Variable" in op.type:
                 variables_nodes.append(op)
 
@@ -234,40 +233,50 @@ class nnf_tf_freezer(object):
                 dt_int32 = tf.as_dtype(tf.int32).as_datatype_enum 
 
                 init = tf.NodeDef(
-                    name = var.name + "/ones",
-                    op = "Fill",
-                    input = [var.name + "/ones/shape", var.name + "/ones/const"],
-                    attr = {
+                    name=f"{var.name}/ones",
+                    op="Fill",
+                    input=[f"{var.name}/ones/shape", f"{var.name}/ones/const"],
+                    attr={
                         'T': tf.AttrValue(type=dt),
-                        'index_type': tf.AttrValue(type=dt_int32)
-                    }
+                        'index_type': tf.AttrValue(type=dt_int32),
+                    },
                 )
 
                 shape = tf.NodeDef(
-                    name = var.name + "/ones/shape",
-                    op = "Const",
-                    attr = {
+                    name=f"{var.name}/ones/shape",
+                    op="Const",
+                    attr={
                         "dtype": tf.AttrValue(type=dt_int32),
-                        "value": tf.AttrValue(tensor = tf.make_tensor_proto(vt.get_shape().as_list()))
-                    }
+                        "value": tf.AttrValue(
+                            tensor=tf.make_tensor_proto(vt.get_shape().as_list())
+                        ),
+                    },
                 )
 
                 const = tf.NodeDef(
-                    name = var.name + "/ones/const",
-                    op = "Const",
-                    #dtype =tf.AttrValue(type=dt),
-                    attr = {
+                    name=f"{var.name}/ones/const",
+                    op="Const",
+                    attr={
                         "dtype": tf.AttrValue(type=dt),
-                        "value": tf.AttrValue(tensor = tf.make_tensor_proto(1.0, dt))
-                    }
+                        "value": tf.AttrValue(
+                            tensor=tf.make_tensor_proto(1.0, dt)
+                        ),
+                    },
                 )
 
-                node = tf.NodeDef( name=var.name + "/assign", op='Assign',input=[var.name, var.name+"/ones"], 
-                    attr={'use_locking': tf.AttrValue(b=False), 'validate_shape': tf.AttrValue(b=True),
-                    'T': tf.AttrValue(type=dt)})
+                node = tf.NodeDef(
+                    name=f"{var.name}/assign",
+                    op='Assign',
+                    input=[var.name, f"{var.name}/ones"],
+                    attr={
+                        'use_locking': tf.AttrValue(b=False),
+                        'validate_shape': tf.AttrValue(b=True),
+                        'T': tf.AttrValue(type=dt),
+                    },
+                )
                 g_def.node.extend([shape, const, init, node])
-                var_inits.append("^" + var.name + "/assign")
-            
+                var_inits.append(f"^{var.name}/assign")
+
             noop_assign = tf.NodeDef(name = "init_all_var", op="NoOp", input = var_inits)
             g_def.node.extend([noop_assign])
 
@@ -303,13 +312,11 @@ class nnf_tf_freezer(object):
                 if "ApplyGradient" in str(op.type):
                     aps.append(op)
                     varlist.append(op.inputs[0])
-            
+
             last_outputs = []
             num_nodes = len(ops)
-            name2nodeIdx_map = {}
-            for i in range(num_nodes):
-                name2nodeIdx_map[ops[i].name] = i
-            node_outputs_ = [[] for i in range(num_nodes)]
+            name2nodeIdx_map = {ops[i].name: i for i in range(num_nodes)}
+            node_outputs_ = [[] for _ in range(num_nodes)]
             for n in range(num_nodes):
                 op = ops[n]
                 pending_count = len(op.inputs)
@@ -340,9 +347,9 @@ class nnf_tf_freezer(object):
                 print("Updated:")
                 for i in range(0, len(varlist)):
                     print(varlist[i].name, ret1[i])
-            
+
             iter_times = []
-            for i in range(num_iter):
+            for _ in range(num_iter):
                 start_time = time.time()
                 ret = sess.run(last_outputs + varlist, feed_dict)
                 ret1 = sess.run(varlist + aps , feed_dict)

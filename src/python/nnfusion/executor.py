@@ -57,12 +57,9 @@ def parse_nnf_params(param_file):
             }
         return out
 
-    weights = convert_nnf_info(nnf_params.get("weight", dict()),
-                               is_nnf_input=True)
-    inputs = convert_nnf_info(nnf_params.get("input", dict()),
-                              is_nnf_input=True)
-    outputs = convert_nnf_info(nnf_params.get("output", dict()),
-                               is_nnf_input=False)
+    weights = convert_nnf_info(nnf_params.get("weight", {}), is_nnf_input=True)
+    inputs = convert_nnf_info(nnf_params.get("input", {}), is_nnf_input=True)
+    outputs = convert_nnf_info(nnf_params.get("output", {}), is_nnf_input=False)
 
     return weights, inputs, outputs
 
@@ -93,8 +90,7 @@ class Executor(object):
         nnf_rt_dir = os.path.abspath(nnf_rt_dir)
         self.libnnf_path = find_nnf_rt(nnf_rt_dir)
         if self.libnnf_path == "":
-            raise Exception(
-                "nnf_rt lib not found in folder {}".format(nnf_rt_dir))
+            raise Exception(f"nnf_rt lib not found in folder {nnf_rt_dir}")
 
         # prepare init/free/kernel_entry
         self.init_flag = False
@@ -205,9 +201,8 @@ class Executor(object):
                     )
                 signature[index] = data_format.pointer_type
                 params[index] = data_format.pointer
-            else:
-                if strict:
-                    raise Exception(f"Unused input {name}")
+            elif strict:
+                raise Exception(f"Unused input {name}")
         for name, data_format in outputs.items():
             if name in self.output_index:
                 index = self.output_index[name]
@@ -220,9 +215,8 @@ class Executor(object):
                 signature[len(self.input_descs) +
                           index] = data_format.pointer_type
                 params[len(self.input_descs) + index] = data_format.pointer
-            else:
-                if strict:
-                    raise Exception(f"Unused output {name}")
+            elif strict:
+                raise Exception(f"Unused output {name}")
         self.feed_pointers(signature, params)
 
     def feed_pointers(self, signature, params):

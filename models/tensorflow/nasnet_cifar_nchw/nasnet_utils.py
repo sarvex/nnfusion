@@ -53,8 +53,7 @@ def calc_reduction_layers(num_cells, num_reduction_layers):
 @tf.contrib.framework.add_arg_scope
 def get_channel_index(data_format=INVALID):
   assert data_format != INVALID
-  axis = 3 if data_format == 'NHWC' else 1
-  return axis
+  return 3 if data_format == 'NHWC' else 1
 
 
 @tf.contrib.framework.add_arg_scope
@@ -149,9 +148,7 @@ def _operation_to_filter_shape(operation):
 
 def _operation_to_num_layers(operation):
   splitted_operation = operation.split('_')
-  if 'x' in splitted_operation[-1]:
-    return 1
-  return int(splitted_operation[-1])
+  return 1 if 'x' in splitted_operation[-1] else int(splitted_operation[-1])
 
 
 def _operation_to_info(operation):
@@ -304,7 +301,7 @@ class NasNetABaseCell(object):
     with tf.variable_scope(scope):
       net = self._cell_base(net, prev_layer)
       for iteration in range(5):
-        with tf.variable_scope('comb_iter_{}'.format(iteration)):
+        with tf.variable_scope(f'comb_iter_{iteration}'):
           left_hiddenstate_idx, right_hiddenstate_idx = (
               self._hiddenstate_indices[i],
               self._hiddenstate_indices[i + 1])
@@ -384,7 +381,7 @@ class NasNetABaseCell(object):
       should_reduce = should_reduce and not used_h
       if should_reduce:
         stride = 2 if final_height != curr_height else 1
-        with tf.variable_scope('reduction_{}'.format(idx)):
+        with tf.variable_scope(f'reduction_{idx}'):
           net[idx] = factorized_reduction(
               net[idx], final_num_filters, stride)
 

@@ -23,7 +23,7 @@ def create_masked_lm_predictions(input_ids, masked_lm_prob,
     cand_indexes = []
     for (i, input_id) in enumerate(input_ids):
         token = tokenizer.convert_ids_to_tokens(input_id)
-        if token == "[CLS]" or token == "[SEP]":
+        if token in ["[CLS]", "[SEP]"]:
             continue
         cand_indexes.append(i)
 
@@ -47,13 +47,10 @@ def create_masked_lm_predictions(input_ids, masked_lm_prob,
         # 80% of the time, replace with [MASK]
         if rng.random() < 0.8:
             masked_token_id = tokenizer.mask_token_id
+        elif rng.random() < 0.5:
+            masked_token_id = input_ids[index]
         else:
-            # 10% of the time, keep original
-            if rng.random() < 0.5:
-                masked_token_id = input_ids[index]
-            # 10% of the time, replace with random word
-            else:
-                masked_token_id = rng.randint(0, tokenizer.vocab_size - 1)
+            masked_token_id = rng.randint(0, tokenizer.vocab_size - 1)
 
         output[index] = masked_token_id
 
@@ -85,7 +82,7 @@ def preprocess(tokenizer: BertTokenizer, x: Dict) -> Dict:
     #      "E": "avoid"},
     #    "stem": "The sanctions against the school were a punishing blow, and they seemed to what the efforts the school had made to change?"}
     # }
-    
+
     # Use BertTokenizer to encode (tokenize / indexize) two sentences.
     inputs = tokenizer.encode_plus(
             x["string1"],
@@ -93,7 +90,7 @@ def preprocess(tokenizer: BertTokenizer, x: Dict) -> Dict:
             add_special_tokens=True,
             max_length=MAX_LEN,
             )
-    
+
     # Output of `tokenizer.encode_plus` is a dictionary.
     input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
     # For BERT, we need `attention_mask` along with `input_ids` as input.
@@ -107,7 +104,7 @@ def preprocess(tokenizer: BertTokenizer, x: Dict) -> Dict:
 
     input_ids, masked_lm_positions, masked_lm_ids = create_masked_lm_predictions(input_ids, masked_lm_prob,
                                  max_predictions_per_seq, tokenizer, rng)
-    
+
     masked_lm_weights = [1.0] * len(masked_lm_ids)
 
     padding_length = max_predictions_per_seq - len(masked_lm_positions)
@@ -115,12 +112,22 @@ def preprocess(tokenizer: BertTokenizer, x: Dict) -> Dict:
     masked_lm_ids = masked_lm_ids + ([pad_id] * padding_length)
     masked_lm_weights = masked_lm_weights + ([0.0] * padding_length)
 
-    assert len(input_ids) == MAX_LEN, "Error with input length {} vs {}".format(len(input_ids), MAX_LEN)
-    assert len(attention_mask) == MAX_LEN, "Error with input length {} vs {}".format(len(attention_mask), MAX_LEN)
-    assert len(token_type_ids) == MAX_LEN, "Error with input length {} vs {}".format(len(token_type_ids), MAX_LEN)
-    assert len(masked_lm_positions) == max_predictions_per_seq, "Error with input length {} vs {}".format(len(masked_lm_positions), max_predictions_per_seq)
-    assert len(masked_lm_ids) == max_predictions_per_seq, "Error with input length {} vs {}".format(len(masked_lm_ids), max_predictions_per_seq)
-    
+    assert (
+        len(input_ids) == MAX_LEN
+    ), f"Error with input length {len(input_ids)} vs {MAX_LEN}"
+    assert (
+        len(attention_mask) == MAX_LEN
+    ), f"Error with input length {len(attention_mask)} vs {MAX_LEN}"
+    assert (
+        len(token_type_ids) == MAX_LEN
+    ), f"Error with input length {len(token_type_ids)} vs {MAX_LEN}"
+    assert (
+        len(masked_lm_positions) == max_predictions_per_seq
+    ), f"Error with input length {len(masked_lm_positions)} vs {max_predictions_per_seq}"
+    assert (
+        len(masked_lm_ids) == max_predictions_per_seq
+    ), f"Error with input length {len(masked_lm_ids)} vs {max_predictions_per_seq}"
+
     # Just a python list to `torch.tensor`
     label = torch.tensor(int(x["quality"])).long()
     input_ids = torch.tensor(input_ids)
